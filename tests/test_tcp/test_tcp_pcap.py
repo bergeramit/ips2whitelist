@@ -1,9 +1,7 @@
 from pytest import mark
 
 @mark.parametrize('pcap_path', [
-    ('test_tcp.pcap'),
+    (os.path.join('tests','test_tcp','todo.pcap')),
 ])
-def test_whitelist_on_pcap(whitelist, pcap_path):
-    print(whitelist)
-    print(pcap_path)
-    assert True
+def test_whitelist_rule_on_pcap(whitelist_rule, pcap_path, run_pcap_with_rule):
+    assert len(run_pcap_with_rule(pcap_path, whitelist_rule)) > 0
