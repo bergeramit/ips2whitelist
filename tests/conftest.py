@@ -1,4 +1,5 @@
 import time
+import os
 from subprocess import Popen, PIPE
 
 from pytest import fixture
@@ -13,8 +14,8 @@ def pytest_addoption(parser):
 @fixture(scope='session')
 def whitelist(request):
     WHITELIST_PER_ENV = {
-        'tcp': 'examples\\tcp_whitelist.txt',
-        'dns': 'examples\\dns_whitelist.txt'
+        'tcp': os.path.join('examples','tcp_whitelist.txt'),
+        'dns': os.path.join('examples','dns_whitelist.txt'),
     }
     with open(WHITELIST_PER_ENV[request.config.getoption('--env')], "rb") as f:
         rules = [line.strip() for line in f.readlines()]
