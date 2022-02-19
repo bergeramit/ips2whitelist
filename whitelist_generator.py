@@ -5,6 +5,10 @@ CONSTRAINT_OPERATOR_VALUE_RE = "(?P<operator>.*)\(other=(?P<value>\d+)\)"
 class WhitelistGenerator:
     OPERATORS = {"le": '<=', "eq": '==', "lt": '<', "ge": '>='}
     EXPRESSIONS = ["or", "and"]
+    PROTOCOL_TO_TRANPORT_LAYER = {
+        'dns': 'udp',
+        'tcp': 'tcp'
+    }
 
     def __init__(self, description_obj):
         self.description_obj = description_obj
@@ -22,8 +26,8 @@ class WhitelistGenerator:
         return byte_mask, value
 
     def generate_rule_from_elements(self, size_in_bits, offset_in_bits, operator, value):
+        transport_protocol = self.PROTOCOL_TO_TRANPORT_LAYER[self.description_obj.protocol.decode('utf-8').lower()]
         try:
-            
             offset_in_bytes = int(offset_in_bits) // 8
             size_in_bits = int(size_in_bits)
             if size_in_bits < 8:
@@ -34,14 +38,14 @@ class WhitelistGenerator:
                 size_in_bytes = 1
                 byte_mask, value = self.generate_byte_mask_and_updated_value(size_in_bits, offset_in_bits, value)
 
-                return f"tcp[{offset_in_bytes}:{size_in_bytes}] & 0x{byte_mask:x} {self.OPERATORS[operator]} {value}"
+                return f"{transport_protocol}[{offset_in_bytes}:{size_in_bytes}] & 0x{byte_mask:x} {self.OPERATORS[operator]} {value}"
 
             else:
                 size_in_bytes = size_in_bits // 8
         except ValueError:
             return None
         
-        return f"tcp[{offset_in_bytes}:{size_in_bytes}] {self.OPERATORS[operator]} {value}"
+        return f"{transport_protocol}[{offset_in_bytes}:{size_in_bytes}] {self.OPERATORS[operator]} {value}"
 
     def create_rule_from_constraint(self, constraint_rule):
         split_rule = constraint_rule.split('.')
