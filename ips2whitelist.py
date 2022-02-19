@@ -11,9 +11,9 @@ def ips2whitelist(input_desc, output_whitelist):
     description_obj = IPSDescrption(raw_description=raw_description)
     description_obj.display()
 
-    with open(output_whitelist, "wb") as whitelist_file:
+    with open(output_whitelist, "w") as whitelist_file:
         for whitelist_rule in WhitelistGenerator(description_obj):
-            # whitelist_file.write(whitelist_rule + os.linesep)
+            whitelist_file.write(whitelist_rule + '\n')
             print(whitelist_rule)
 
 
