@@ -1,0 +1,62 @@
+BitString (BitString<Tcp_header_source_port::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+BitString (BitString<Tcp_header_destination_port::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+BitString (BitString<Tcp_header_sequence_number::Sized Value Equality NumberRepresentable>) [size: 32 bits]
+BitString (BitString<Tcp_header_acknowledgment_number::Sized Value Equality NumberRepresentable>) [size: 32 bits]
+BitString (BitString<Tcp_header_data_offset::Sized Value Equality NumberRepresentable>) [size: 4 bits]
+BitString (BitString<Tcp_header_reserved::Sized Value Equality NumberRepresentable>) [size: 4 bits]
+BitString (BitString<Tcp_header_cwr::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Tcp_header_ece::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Tcp_header_urg::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Tcp_header_ack::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Tcp_header_psh::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Tcp_header_rst::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Tcp_header_syn::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Tcp_header_fin::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Tcp_header_window::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+BitString (BitString<Tcp_header_checksum::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+BitString (BitString<Tcp_header_urgent_pointer::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+BitString (BitString<End_of_option_list_option_kind::Sized Value Equality NumberRepresentable>) [size: 8 bits]
+Struct (Struct<End_of_option_list_option::Sized Equality>)
+	Field (kind)
+	Constraint (Self.kind.to_number().eq(other=0))
+BitString (BitString<No_operation_option_kind::Sized Value Equality NumberRepresentable>) [size: 8 bits]
+Struct (Struct<No_operation_option::Sized Equality>)
+	Field (kind)
+	Constraint (Self.kind.to_number().eq(other=1))
+BitString (BitString<Maximum_segment_size_option_kind::Sized Value Equality NumberRepresentable>) [size: 8 bits]
+BitString (BitString<Maximum_segment_size_option_length::Sized Value Equality NumberRepresentable>) [size: 8 bits]
+BitString (BitString<Maximum_segment_size_option_maximum_segment_size::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+Struct (Struct<Maximum_segment_size_option::Sized Equality>)
+	Field (kind)
+	Field (length)
+	Field (maximum_segment_size)
+	Constraint (Self.kind.to_number().eq(other=2))
+	Constraint (Self.length.to_number().eq(other=4))
+Enum (Enum<Tcp_option::Sized>)
+Array (Array<Tcp_header_options::Sized Equality IndexCollection>)
+BitString (BitString<Tcp_header_data::Sized Value Equality NumberRepresentable>) [size: Context.data_size.minus(other=160.plus(other=Self.data_offset.to_number().minus(other=5).multiply(other=32))) bits]
+Struct (Struct<Tcp_header::Sized Equality>)
+	Field (source_port)
+	Field (destination_port)
+	Field (sequence_number)
+	Field (acknowledgment_number)
+	Field (data_offset)
+	Field (reserved)
+	Field (cwr)
+	Field (ece)
+	Field (urg)
+	Field (ack)
+	Field (psh)
+	Field (rst)
+	Field (syn)
+	Field (fin)
+	Field (window)
+	Field (checksum)
+	Field (urgent_pointer)
+	Field (options)
+	Field (data)
+Context (Context<Context::>)
+	Field (data_size)
+Context (Context<Context::>)
+	Field (data_size)
+Protocol (TCP)

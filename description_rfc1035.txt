@@ -1,0 +1,69 @@
+BitString (BitString<Dns_header_ID::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+BitString (BitString<Dns_header_QR::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Dns_header_OPCODE::Sized Value Equality NumberRepresentable>) [size: 4 bits]
+BitString (BitString<Dns_header_AA::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Dns_header_TC::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Dns_header_RD::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Dns_header_RA::Sized Value Equality NumberRepresentable>) [size: 1 bits]
+BitString (BitString<Dns_header_Z::Sized Value Equality NumberRepresentable>) [size: 3 bits]
+BitString (BitString<Dns_header_RCODE::Sized Value Equality NumberRepresentable>) [size: 4 bits]
+BitString (BitString<Dns_header_QDCOUNT::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+BitString (BitString<Dns_header_ANCOUNT::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+BitString (BitString<Dns_header_NSCOUNT::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+BitString (BitString<Dns_header_ARCOUNT::Sized Value Equality NumberRepresentable>) [size: 16 bits]
+BitString (BitString<Question_section_QNAME::Sized AtMost Equality>) [size: 2040 bits]
+BitString (BitString<Question_section_QTYPE::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Question_section_QCLASS::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Resource_record_answer_NAME::Sized AtMost Equality>) [size: 2040 bits]
+BitString (BitString<Resource_record_answer_TYPE::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Resource_record_answer_CLASS::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Resource_record_answer_TTL::Sized Value Equality>) [size: 32 bits]
+BitString (BitString<Resource_record_answer_RDLENGTH::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Resource_record_answer_RDATA::Sized Value Equality>) [size: self.RDLENGTH.to_number() bits]
+BitString (BitString<Resource_record_authority_NAME::Sized AtMost Equality>) [size: 2040 bits]
+BitString (BitString<Resource_record_authority_TYPE::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Resource_record_authority_CLASS::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Resource_record_authority_TTL::Sized Value Equality>) [size: 32 bits]
+BitString (BitString<Resource_record_authority_RDLENGTH::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Resource_record_authority_RDATA::Sized Value Equality>) [size: self.RDLENGTH.to_number() bits]
+BitString (BitString<Resource_record_additional_NAME::Sized AtMost Equality>) [size: 2040 bits]
+BitString (BitString<Resource_record_additional_TYPE::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Resource_record_additional_CLASS::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Resource_record_additional_TTL::Sized Value Equality>) [size: 32 bits]
+BitString (BitString<Resource_record_additional_RDLENGTH::Sized Value Equality>) [size: 16 bits]
+BitString (BitString<Resource_record_additional_RDATA::Sized Value Equality>) [size: self.RDLENGTH.to_number() bits]
+Struct (Struct<Resource_record::Sized Equality>)
+	Field (NAME)
+    Field (TYPE)
+    Field (CLASS)
+    Field (TTL)
+    Field (RDLENGTH)
+    Field (RDATA)
+	Constraint (Self.TTL.to_number().ge(other=0))
+    Constraint (Self.NAME.get().is_text())
+    Constraint (Self.TYPE.to_number().le(other=16))
+    Constraint (Self.CLASS.to_number().le(other=4))
+Struct (Struct<Question_section::Sized Equality>)
+	Field (QNAME)
+    Field (QTYPE)
+    Field (QCLASS)
+	Constraint (Self.QNAME.get().not_contain(other=0))
+    Constraint (Self.QTYPE.get().le(other=16).or().ge(other=252))
+    Constraint (Self.QCLASS.get().le(other=4).or().eq(other=255))
+Struct (Struct<Dns_header::Sized Equality>)
+	Field (ID)
+	Field (QR)
+	Field (OPCODE)
+	Field (AA)
+	Field (TC)
+	Field (RD)
+	Field (RA)
+	Field (Z)
+	Field (RCODE)
+	Field (QDCOUNT)
+	Field (ANCOUNT)
+	Field (NSCOUNT)
+	Field (ARCOUNT)
+    Constraint (Self.Z.to_number().eq(other=0))
+    Constraint (Self.RCODE.to_number().lt(other=64))
+Protocol (Dns)
