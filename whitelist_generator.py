@@ -26,6 +26,9 @@ class WhitelistGenerator:
             return
 
         struct_name, field_name, size_in_bits, offset_in_bits = entry
+        if field_name == b"Z":
+            print(f"Z = size_in_bits={size_in_bits}, offset_in_bits={offset_in_bits}")
+
         for function in split_rule[1:]:
             match = re.search(CONSTRAINT_OPERATOR_VALUE_RE, function)
             if match:

@@ -12,6 +12,8 @@ BitString (BitString<Dns_header_ANCOUNT::Sized Value Equality NumberRepresentabl
 BitString (BitString<Dns_header_NSCOUNT::Sized Value Equality NumberRepresentable>) [size: 16 bits]
 BitString (BitString<Dns_header_ARCOUNT::Sized Value Equality NumberRepresentable>) [size: 16 bits]
 BitString (BitString<Question_section_QNAME::Sized AtMost Equality>) [size: AtMost(2040) bits]
+Array (Array<QNAME_label_LENGTH::Sized Equality IndexCollection>) [size: 8 bits]
+Array (Array<QNAME_label_NAME::Sized Equality IndexCollection>) [size: AtMost(504) bits]
 BitString (BitString<Question_section_QTYPE::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Question_section_QCLASS::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Resource_record_answer_NAME::Sized AtMost Equality>) [size: AtMost(2040) bits]
@@ -32,6 +34,10 @@ BitString (BitString<Resource_record_additional_CLASS::Sized Value Equality>) [s
 BitString (BitString<Resource_record_additional_TTL::Sized Value Equality>) [size: 32 bits]
 BitString (BitString<Resource_record_additional_RDLENGTH::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Resource_record_additional_RDATA::Sized Value Equality>) [size: self.RDLENGTH.to_number() bits]
+Struct (Struct<QNAME_label::Sized Equality>)
+	Field (LENGTH)
+    Field (NAME)
+	Constraint (Self.LENGTH.to_number().eq(other=size_of(NAME)))
 Struct (Struct<Resource_record::Sized Equality>)
 	Field (NAME)
     Field (TYPE)
