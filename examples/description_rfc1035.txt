@@ -11,22 +11,22 @@ BitString (BitString<Dns_header_QDCOUNT::Sized Value Equality NumberRepresentabl
 BitString (BitString<Dns_header_ANCOUNT::Sized Value Equality NumberRepresentable>) [size: 16 bits]
 BitString (BitString<Dns_header_NSCOUNT::Sized Value Equality NumberRepresentable>) [size: 16 bits]
 BitString (BitString<Dns_header_ARCOUNT::Sized Value Equality NumberRepresentable>) [size: 16 bits]
-BitString (BitString<Question_section_QNAME::Sized AtMost Equality>) [size: 2040 bits]
+BitString (BitString<Question_section_QNAME::Sized AtMost Equality>) [size: AtMost(2040) bits]
 BitString (BitString<Question_section_QTYPE::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Question_section_QCLASS::Sized Value Equality>) [size: 16 bits]
-BitString (BitString<Resource_record_answer_NAME::Sized AtMost Equality>) [size: 2040 bits]
+BitString (BitString<Resource_record_answer_NAME::Sized AtMost Equality>) [size: AtMost(2040) bits]
 BitString (BitString<Resource_record_answer_TYPE::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Resource_record_answer_CLASS::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Resource_record_answer_TTL::Sized Value Equality>) [size: 32 bits]
 BitString (BitString<Resource_record_answer_RDLENGTH::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Resource_record_answer_RDATA::Sized Value Equality>) [size: self.RDLENGTH.to_number() bits]
-BitString (BitString<Resource_record_authority_NAME::Sized AtMost Equality>) [size: 2040 bits]
+BitString (BitString<Resource_record_authority_NAME::Sized AtMost Equality>) [size: AtMost(2040) bits]
 BitString (BitString<Resource_record_authority_TYPE::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Resource_record_authority_CLASS::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Resource_record_authority_TTL::Sized Value Equality>) [size: 32 bits]
 BitString (BitString<Resource_record_authority_RDLENGTH::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Resource_record_authority_RDATA::Sized Value Equality>) [size: self.RDLENGTH.to_number() bits]
-BitString (BitString<Resource_record_additional_NAME::Sized AtMost Equality>) [size: 2040 bits]
+BitString (BitString<Resource_record_additional_NAME::Sized AtMost Equality>) [size: AtMost(2040) bits]
 BitString (BitString<Resource_record_additional_TYPE::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Resource_record_additional_CLASS::Sized Value Equality>) [size: 16 bits]
 BitString (BitString<Resource_record_additional_TTL::Sized Value Equality>) [size: 32 bits]
@@ -66,4 +66,4 @@ Struct (Struct<Dns_header::Sized Equality>)
 	Field (ARCOUNT)
     Constraint (Self.Z.to_number().eq(other=0))
     Constraint (Self.RCODE.to_number().lt(other=64))
-Protocol (Dns)
+Protocol (DNS)
