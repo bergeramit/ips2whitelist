@@ -34,14 +34,14 @@ class WhitelistGenerator:
                 size_in_bytes = 1
                 byte_mask, value = self.generate_byte_mask_and_updated_value(size_in_bits, offset_in_bits, value)
 
-                return f"{self.description_obj.protocol.lower().decode('utf-8')}[{offset_in_bytes}:{size_in_bytes}] & 0x{byte_mask:x} {self.OPERATORS[operator]} {value}"
+                return f"tcp[{offset_in_bytes}:{size_in_bytes}] & 0x{byte_mask:x} {self.OPERATORS[operator]} {value}"
 
             else:
                 size_in_bytes = size_in_bits // 8
         except ValueError:
             return None
         
-        return f"{self.description_obj.protocol.lower().decode('utf-8')}[{offset_in_bytes}:{size_in_bytes}] {self.OPERATORS[operator]} {value}"
+        return f"tcp[{offset_in_bytes}:{size_in_bytes}] {self.OPERATORS[operator]} {value}"
 
     def create_rule_from_constraint(self, constraint_rule):
         split_rule = constraint_rule.split('.')
