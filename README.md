@@ -15,3 +15,10 @@ pytest -sv --env=dns tests\test_dns
 # Or for TCP
 pytest -sv --env=tcp tests\test_tcp
 ```
+
+On linux with pytest run:
+```
+pytest-3 -sv --env=dns tests\test_dns
+# Or for TCP
+pytest-3 -sv --env=tcp tests\test_tcp
+```
