@@ -1,2 +1,2 @@
-udp[11:1] & 0x70 == 0
-udp[11:1] & 0xf < 4
+udp[11:1] & 0x70 == 0 -> Z.to_number().eq(other=0)
+udp[11:1] & 0xf < 4 -> RCODE.to_number().lt(other=4)

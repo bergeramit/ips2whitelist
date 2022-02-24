@@ -1,6 +1,9 @@
 import os
 from pytest import mark
 
+class FailedRule(Exception):
+    pass
+
 @mark.parametrize('pcap_path', [
     "simple_query_non_zero_Z.pcap",
     "ap2_wrong_label_size.pcap",
@@ -18,5 +21,6 @@ from pytest import mark
     "whitelist_simple_query.pcap",
 ])
 def test_whitelist_rule_on_pcap(pcap_path, run_pcap_with_rule, whitelist_rule):
-    assert len(run_pcap_with_rule(os.path.join('tests','test_dns', 'pcaps', pcap_path), whitelist_rule)) > 0
-
+    if len(run_pcap_with_rule(os.path.join('tests','test_dns', 'pcaps', pcap_path), whitelist_rule.split(b'->')[0])) <= 0:
+        raise FailedRule(f"{whitelist_rule.split(b'->')[1]} on {pcap_path}")
+    assert True

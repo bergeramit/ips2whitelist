@@ -101,4 +101,4 @@ class WhitelistGenerator:
         for constraint_rule in self.description_obj.constraint_rules:
             whitelist_rule = self.create_rule_from_constraint(constraint_rule)
             if whitelist_rule:
-                yield whitelist_rule
+                yield whitelist_rule, constraint_rule
