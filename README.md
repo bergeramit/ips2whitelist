@@ -11,14 +11,14 @@ python ips2whitelist.py examples\description_tcp.txt examples\tcp_whitelist.txt
 
 Run with:
 ```
-pytest -sv --env=dns tests\test_dns
+pytest -v --env=dns tests\test_dns
 # Or for TCP
-pytest -sv --env=tcp tests\test_tcp
+pytest -v --env=tcp tests\test_tcp
 ```
 
 On linux with pytest run:
 ```
-pytest-3 -sv --env=dns tests\test_dns
+pytest-3 -v --env=dns tests/test_dns
 # Or for TCP
-pytest-3 -sv --env=tcp tests\test_tcp
+pytest-3 -v --env=tcp tests/test_tcp
 ```
