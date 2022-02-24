@@ -5,7 +5,7 @@ CONSTRAINT_EXPRESSION_RE = "(?P<expression>.*)\(\)"
 
 class WhitelistGenerator:
     OPERATORS = {"le": '<=', "eq": '==', "lt": '<', "ge": '>='}
-    EXPRESSIONS = ["or", "and"]
+    SUPPORTED_EXPRESSIONS = ["or", "and"]
     PROTOCOL_TO_TRANPORT_LAYER = {
         'dns': 'udp',
         'tcp': 'tcp'
@@ -54,10 +54,12 @@ class WhitelistGenerator:
         split_rule = constraint_rule.split('.')
         field_name = split_rule[0]
         entry = self.description_obj.get_entry_by_field_name(field_name)
+        
         if not entry:
-            return
+            # Undeclared field rule
+            return None
 
-        struct_name, field_name, size_in_bits, offset_in_bits = entry
+        _, field_name, size_in_bits, offset_in_bits = entry
         for function in split_rule[1:]:
             match_basic_rule = re.search(CONSTRAINT_BASIC_OPERATOR_VALUE_RE, function)
             match_expression_rule = re.search(CONSTRAINT_EXPRESSION_RE, function)
@@ -70,16 +72,17 @@ class WhitelistGenerator:
                                              match_basic_rule.group('operator'),
                                              match_basic_rule.group('value')
                                              ))
-                # print(f"\nfrom: {constraint_rule}")
-            elif match_expression_rule:
-                print(f"Found expression: {match_expression_rule.group('expression')}")
-                expression_addon = f' {match_expression_rule.group("expression")} '
+
+            elif match_expression_rule and match_expression_rule.group('expression') in self.SUPPORTED_EXPRESSIONS:
+                expression = match_expression_rule.group('expression')
+                print(f"Found expression: {expression}")
+                expression_addon = f' {expression} '
 
         if not whitelist_basic_rules:
             # Rule unsupported
             return None
 
-        whitelist_full_rule = whitelist_basic_rules[0] if expression_addon else expression_addon.join(whitelist_basic_rules)
+        whitelist_full_rule = expression_addon.join(whitelist_basic_rules) if expression_addon else whitelist_basic_rules[0]
         print(f"Whitelist Rule: {whitelist_full_rule}")
         return whitelist_full_rule
 
