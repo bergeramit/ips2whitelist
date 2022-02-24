@@ -61,7 +61,6 @@ class WhitelistGenerator:
         for function in split_rule[1:]:
             match_basic_rule = re.search(CONSTRAINT_BASIC_OPERATOR_VALUE_RE, function)
             match_expression_rule = re.search(CONSTRAINT_EXPRESSION_RE, function)
-            match_basic_rule = re.search(CONSTRAINT_BASIC_OPERATOR_VALUE_RE, function)
 
             if match_basic_rule:
                 # Basic rule
@@ -74,6 +73,10 @@ class WhitelistGenerator:
                 # print(f"\nfrom: {constraint_rule}")
             elif match_expression_rule:
                 expression_addon = f' {match_expression_rule.group("expression")} '
+
+        if not whitelist_basic_rules:
+            # Rule unsupported
+            return None
 
         whitelist_full_rule = whitelist_basic_rules[0] if expression_addon else expression_addon.join(whitelist_basic_rules)
         print(f"Whitelist Rule: {whitelist_full_rule}")
