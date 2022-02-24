@@ -75,7 +75,7 @@ class WhitelistGenerator:
             elif match_expression_rule:
                 expression_addon = f' {match_expression_rule.group("expression")} '
 
-        whitelist_full_rule = whitelist_basic_rules[0] if not expression_addon else expression_addon.join(whitelist_basic_rules)
+        whitelist_full_rule = whitelist_basic_rules[0] if expression_addon else expression_addon.join(whitelist_basic_rules)
         print(f"Whitelist Rule: {whitelist_full_rule}")
         return whitelist_full_rule
 
