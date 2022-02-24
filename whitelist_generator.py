@@ -1,6 +1,7 @@
 import re
 
-CONSTRAINT_OPERATOR_VALUE_RE = "(?P<operator>.*)\(other=(?P<value>\d+)\)"
+CONSTRAINT_BASIC_OPERATOR_VALUE_RE = "(?P<operator>.*)\(other=(?P<value>\d+)\)"
+CONSTRAINT_EXPRESSION_RE = "(?P<expression>.*)\(\)"
 
 class WhitelistGenerator:
     OPERATORS = {"le": '<=', "eq": '==', "lt": '<', "ge": '>='}
@@ -48,6 +49,8 @@ class WhitelistGenerator:
         return f"{transport_protocol}[{offset_in_bytes}:{size_in_bytes}] {self.OPERATORS[operator]} {value}"
 
     def create_rule_from_constraint(self, constraint_rule):
+        whitelist_basic_rules = []
+        expression_addon = None
         split_rule = constraint_rule.split('.')
         field_name = split_rule[0]
         entry = self.description_obj.get_entry_by_field_name(field_name)
@@ -56,16 +59,23 @@ class WhitelistGenerator:
 
         struct_name, field_name, size_in_bits, offset_in_bits = entry
         for function in split_rule[1:]:
-            match = re.search(CONSTRAINT_OPERATOR_VALUE_RE, function)
-            if match:
-                whitelist_rule =  self.generate_rule_from_elements(
-                                      size_in_bits,
-                                      offset_in_bits,
-                                      match.group('operator'),
-                                      match.group('value')
-                                  )
-                print(f"\nfrom: {constraint_rule}")
-                return whitelist_rule
+            match_basic_rule = re.search(CONSTRAINT_BASIC_OPERATOR_VALUE_RE, function)
+            match_expression_rule = re.search(CONSTRAINT_EXPRESSION_RE, function)
+            match_basic_rule = re.search(CONSTRAINT_BASIC_OPERATOR_VALUE_RE, function)
+
+            if match_basic_rule:
+                # Basic rule
+                whitelist_basic_rules.append(self.generate_rule_from_elements(
+                                             size_in_bits,
+                                             offset_in_bits,
+                                             match_basic_rule.group('operator'),
+                                             match_basic_rule.group('value')
+                                             ))
+                # print(f"\nfrom: {constraint_rule}")
+            elif match_expression_rule:
+                expression_addon = f' {match_expression_rule.group("expression")} '
+            
+            return expression_addon.join(whitelist_basic_rules)
 
 
     def __iter__(self):
