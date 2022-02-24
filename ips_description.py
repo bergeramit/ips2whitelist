@@ -59,7 +59,3 @@ class IPSDescrption:
         print(f"Constraints")
         for constraint_rule in self.constraint_rules:
             print(constraint_rule)
-
-
-
-

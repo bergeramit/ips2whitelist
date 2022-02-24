@@ -20,7 +20,7 @@ class FailedRule(Exception):
     "static_rr_type_ge_16.pcap",
     "whitelist_simple_query.pcap",
 ])
-def test_whitelist_rule_on_pcap(pcap_path, run_pcap_with_rule, whitelist_rule):
+def test_static_whitelist_rule(pcap_path, run_pcap_with_rule, whitelist_rule):
     if len(run_pcap_with_rule(os.path.join('tests','test_dns', 'pcaps', pcap_path), whitelist_rule.split(b'->')[0])) <= 0:
         raise FailedRule(f"{whitelist_rule.split(b'->')[1]} on {pcap_path}")
     assert True

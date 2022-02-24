@@ -46,7 +46,7 @@ class WhitelistGenerator:
         except ValueError as e:
             return None
         
-        return f"{transport_protocol}[{offset_in_bytes}:{size_in_bytes}] {self.OPERATORS[operator]} {value}"
+        return f"{transport_protocol}[{offset_in_bytes + protocol_payload_offset}:{size_in_bytes}] {self.OPERATORS[operator]} {value}"
 
     def create_rule_from_constraint(self, constraint_rule):
         whitelist_basic_rules = []
