@@ -74,8 +74,9 @@ class WhitelistGenerator:
                 # print(f"\nfrom: {constraint_rule}")
             elif match_expression_rule:
                 expression_addon = f' {match_expression_rule.group("expression")} '
-            
-            return expression_addon.join(whitelist_basic_rules)
+
+        print(f"Ruels: {whitelist_basic_rules} expressoin: {expression_addon}")
+        return whitelist_basic_rules[0] if not expression_addon else expression_addon.join(whitelist_basic_rules)
 
 
     def __iter__(self):
