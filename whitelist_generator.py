@@ -72,7 +72,7 @@ class WhitelistGenerator:
                                              ))
                 # print(f"\nfrom: {constraint_rule}")
             elif match_expression_rule:
-                print(f"Found expression: {match_expression_rule.group("expression")}")
+                print(f"Found expression: {match_expression_rule.group('expression')}")
                 expression_addon = f' {match_expression_rule.group("expression")} '
 
         if not whitelist_basic_rules:
