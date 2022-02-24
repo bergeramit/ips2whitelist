@@ -17,6 +17,6 @@ from pytest import mark
     "static_rr_type_ge_16.pcap",
     "whitelist_simple_query.pcap",
 ])
-def test_whitelist_rule_on_pcap(whitelist_rule, pcap_path, run_pcap_with_rule):
-    assert len(run_pcap_with_rule(os.path.join('tests','test_dns', pcap_path), whitelist_rule)) > 0
+def test_whitelist_rule_on_pcap(pcap_path, run_pcap_with_rule, whitelist_rule):
+    assert len(run_pcap_with_rule(os.path.join('tests','test_dns', 'pcaps', pcap_path), whitelist_rule)) > 0
 

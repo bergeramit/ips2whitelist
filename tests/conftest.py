@@ -15,6 +15,7 @@ def pytest_addoption(parser):
 def run_pcap_with_rule():
     def _run_pcap_with_rule(pcap_path, rule):
         string_rule = rule.decode('utf-8')
+        print(f"\ntcpdump -pnnvvr {pcap_path} {string_rule}")
         pipe = Popen(['tcpdump', '-pnnvvr', f'{pcap_path}', f'{string_rule}'], stdout=PIPE)
         time.sleep(1)
         return pipe.communicate()[0]

@@ -7,8 +7,8 @@ class WhitelistGenerator:
     OPERATORS = {"le": '<=', "eq": '==', "lt": '<', "ge": '>='}
     SUPPORTED_EXPRESSIONS = ["or", "and"]
     PROTOCOL_TO_TRANPORT_LAYER = {
-        'dns': 'udp',
-        'tcp': 'tcp'
+        'dns': ('udp', 8),
+        'tcp': ('tcp', 20),
     }
 
     def __init__(self, description_obj):
@@ -27,7 +27,7 @@ class WhitelistGenerator:
         return byte_mask, value
 
     def generate_rule_from_elements(self, size_in_bits, offset_in_bits, operator, value):
-        transport_protocol = self.PROTOCOL_TO_TRANPORT_LAYER[self.description_obj.protocol.decode('utf-8').lower()]
+        transport_protocol, protocol_payload_offset = self.PROTOCOL_TO_TRANPORT_LAYER[self.description_obj.protocol.decode('utf-8').lower()]
         try:
             offset_in_bytes = int(offset_in_bits) // 8
             size_in_bits = int(size_in_bits)
@@ -39,11 +39,11 @@ class WhitelistGenerator:
                 size_in_bytes = 1
                 byte_mask, value = self.generate_byte_mask_and_updated_value(size_in_bits, offset_in_bits, value)
 
-                return f"{transport_protocol}[{offset_in_bytes}:{size_in_bytes}] & 0x{byte_mask:x} {self.OPERATORS[operator]} {value}"
+                return f"{transport_protocol}[{offset_in_bytes + protocol_payload_offset}:{size_in_bytes}] & 0x{byte_mask:x} {self.OPERATORS[operator]} {value}"
 
             else:
                 size_in_bytes = size_in_bits // 8
-        except ValueError:
+        except ValueError as e:
             return None
         
         return f"{transport_protocol}[{offset_in_bytes}:{size_in_bytes}] {self.OPERATORS[operator]} {value}"
@@ -59,23 +59,26 @@ class WhitelistGenerator:
             # Undeclared field rule
             return None
 
-        _, field_name, size_in_bits, offset_in_bits = entry
+        _, field_name, size_in_bits, offset_in_bits, dynamic_offsets = entry
+
         for function in split_rule[1:]:
             match_basic_rule = re.search(CONSTRAINT_BASIC_OPERATOR_VALUE_RE, function)
             match_expression_rule = re.search(CONSTRAINT_EXPRESSION_RE, function)
 
             if match_basic_rule:
                 # Basic rule
-                whitelist_basic_rules.append(self.generate_rule_from_elements(
-                                             size_in_bits,
-                                             offset_in_bits,
-                                             match_basic_rule.group('operator'),
-                                             match_basic_rule.group('value')
-                                             ))
+                basic_rule = self.generate_rule_from_elements(
+                                    size_in_bits,
+                                    offset_in_bits,
+                                    match_basic_rule.group('operator'),
+                                    match_basic_rule.group('value')
+                                )
+                if basic_rule:
+                    # Encounter bit offset of "AtMost" bits = cannot insert rule
+                    whitelist_basic_rules.append(basic_rule)
 
             elif match_expression_rule and match_expression_rule.group('expression') in self.SUPPORTED_EXPRESSIONS:
                 expression = match_expression_rule.group('expression')
-                print(f"Found expression: {expression}")
                 expression_addon = f' {expression} '
 
         if not whitelist_basic_rules:
@@ -83,7 +86,14 @@ class WhitelistGenerator:
             return None
 
         whitelist_full_rule = expression_addon.join(whitelist_basic_rules) if expression_addon else whitelist_basic_rules[0]
-        print(f"Whitelist Rule: {whitelist_full_rule}")
+        if dynamic_offsets:
+            # cannot BPF rule on dynamic offsets
+            print(f"WARNING: creating dynamic offset whitelist rules! will not insert to file. "
+                   "Should change the byte offset of this rule")
+            print(f"DROPPED rule: {whitelist_full_rule}\n")
+            return None
+
+        print(f"Whitelist Rule: {whitelist_full_rule}\n")
         return whitelist_full_rule
 
 

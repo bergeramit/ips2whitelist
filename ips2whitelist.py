@@ -10,12 +10,13 @@ def ips2whitelist(input_desc, output_whitelist):
     
     description_obj = IPSDescrption(raw_description=raw_description)
     description_obj.display()
+    print("\nBegin Whitelist parsing from Constraints...\n")
 
     with open(output_whitelist, "w") as whitelist_file:
         for whitelist_rule in WhitelistGenerator(description_obj):
             whitelist_file.write(whitelist_rule + '\n')
-            print(whitelist_rule)
 
+    print("Done!")
 
 
 if __name__ == "__main__":

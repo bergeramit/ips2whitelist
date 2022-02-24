@@ -28,17 +28,18 @@ class IPSDescrption:
                 return match.group('protocol')
 
     def parse_packet(self):
-        current_struct = None
         offset_in_bits = 0
+        dynamic_offsets = False
         for raw_line in self.raw_description:
             match = re.search(FIELD_IN_STRUCT_RE, raw_line)
             if match:
                 struct_name, field_name, size_in_bits = match.group('struct_name'), match.group('field_name'), match.group('size_in_bits')
-                self.packet.append((struct_name, field_name, size_in_bits, offset_in_bits))
+                self.packet.append((struct_name, field_name, size_in_bits, offset_in_bits, dynamic_offsets))
                 try:
                     offset_in_bits += int(size_in_bits)
                 except ValueError:
-                    offset_in_bits = 0 # cannot measure dynamic offsets
+                    dynamic_offsets = True # cannot measure dynamic offsets in static parsing
+                    offset_in_bits = 0
 
     def parse_constraints(self):
         for raw_line in self.raw_description:
@@ -49,7 +50,7 @@ class IPSDescrption:
     def display(self):
         print(f"Descrption for Protocol: {self.protocol.decode('utf-8')}")
         print("Packet Struct:")
-        for struct_name, field_name, size_in_bits, offset_in_bits in self.packet:
+        for struct_name, field_name, size_in_bits, _, _ in self.packet:
             try:
                 print(f"{struct_name.decode('utf-8')}.{field_name.decode('utf-8')} : {int(size_in_bits)} bits")
             except ValueError:
