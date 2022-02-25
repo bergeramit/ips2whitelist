@@ -27,6 +27,16 @@ def pytest_generate_tests(metafunc):
         'dns': os.path.join('examples','dns_whitelist.txt'),
     }
     with open(WHITELIST_PER_ENV[metafunc.config.getoption('--env')], "rb") as f:
-        rules = [line.strip() for line in f.readlines()]
+        static_rules, dynamic_rules = [], []
+        for line in f.readlines():
+            # print(f"line: {line.strip()}")
+            if b'Dynamic' not in line.strip():
+                static_rules.append(line.strip())
+            else:
+                dynamic_rules.append(line.strip())
 
-    metafunc.parametrize("whitelist_rule", rules)
+    if 'dynamic' in metafunc.function.__name__:
+        metafunc.parametrize("dynamic_whitelist_rule", dynamic_rules)
+    
+    if 'static' in metafunc.function.__name__:
+        metafunc.parametrize("static_whitelist_rule", static_rules)

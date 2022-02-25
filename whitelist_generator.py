@@ -1,10 +1,17 @@
 import re
 
-CONSTRAINT_BASIC_OPERATOR_VALUE_RE = "(?P<operator>.*)\(other=(?P<value>\d+)\)"
+CONSTRAINT_BASIC_OPERATOR_VALUE_RE = "(?P<operator>.*)\(other=(?P<value>.*)\)"
 CONSTRAINT_EXPRESSION_RE = "(?P<expression>.*)\(\)"
 
 class WhitelistGenerator:
-    OPERATORS = {"le": '<=', "eq": '==', "lt": '<', "ge": '>='}
+    STATIC_OPERATORS = {"le": '<=', "eq": '==', "lt": '<', "ge": '>='}
+    DYNAMIC_OPERATORS = {
+        'validate_records_amount': 'is-the-amount-of',
+        'not_contain': 'not-contain',
+        'is_text': 'only-contains',
+        'compressions_offset': 'compression-offset-is',
+        'labels': 'labels-in-the'
+        }
     SUPPORTED_EXPRESSIONS = ["or", "and"]
     PROTOCOL_TO_TRANPORT_LAYER = {
         'dns': ('udp', 8),
@@ -39,14 +46,18 @@ class WhitelistGenerator:
                 size_in_bytes = 1
                 byte_mask, value = self.generate_byte_mask_and_updated_value(size_in_bits, offset_in_bits, value)
 
-                return f"{transport_protocol}[{offset_in_bytes + protocol_payload_offset}:{size_in_bytes}] & 0x{byte_mask:x} {self.OPERATORS[operator]} {value}"
+                return f"{transport_protocol}[{offset_in_bytes + protocol_payload_offset}:{size_in_bytes}] & 0x{byte_mask:x} {self.STATIC_OPERATORS[operator]} {value}"
 
             else:
                 size_in_bytes = size_in_bits // 8
         except ValueError as e:
             return None
         
-        return f"{transport_protocol}[{offset_in_bytes + protocol_payload_offset}:{size_in_bytes}] {self.OPERATORS[operator]} {value}"
+        return f"{transport_protocol}[{offset_in_bytes + protocol_payload_offset}:{size_in_bytes}] {self.STATIC_OPERATORS[operator]} {value}"
+
+    @classmethod
+    def is_dynamic_rule(cls, match_basic_rule):
+        return match_basic_rule.group("operator") in cls.DYNAMIC_OPERATORS
 
     def create_rule_from_constraint(self, constraint_rule):
         whitelist_basic_rules = []
@@ -61,11 +72,17 @@ class WhitelistGenerator:
 
         _, field_name, size_in_bits, offset_in_bits, dynamic_offsets = entry
 
+        # print(f"\nsplit lines: {split_rule[1:]}\n")
         for function in split_rule[1:]:
             match_basic_rule = re.search(CONSTRAINT_BASIC_OPERATOR_VALUE_RE, function)
             match_expression_rule = re.search(CONSTRAINT_EXPRESSION_RE, function)
 
             if match_basic_rule:
+                if self.is_dynamic_rule(match_basic_rule):
+                    whitelist_full_rule = f"Dynamic {field_name.decode('utf-8')} {self.DYNAMIC_OPERATORS[match_basic_rule.group('operator')]} {match_basic_rule.group('value')}"
+                    print(f"Dynamic Whitelist Rule: {whitelist_full_rule}\n")
+                    return whitelist_full_rule
+
                 # Basic rule
                 basic_rule = self.generate_rule_from_elements(
                                     size_in_bits,
