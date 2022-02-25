@@ -55,9 +55,9 @@ def decode_name(s, pointer=0):
 class DNSPacket():
     def __init__(self, pkt):
         self.pkt = pkt
-        self.qcount = struct.unpack("!H", pkt[4:6])
-        self.actual_qcount = 0
-        self.ancount = struct.unpack("!H", pkt[6:8])
+        self.qdcount = struct.unpack("!H", pkt[4:6])[0]
+        self.actual_qdcount = 0
+        self.ancount = struct.unpack("!H", pkt[6:8])[0]
         self.actual_ancount = 0
         self.authority_rr = struct.unpack("!H", pkt[8:10])
         self.additional_rr = struct.unpack("!H", pkt[10:12])
@@ -68,15 +68,15 @@ class DNSPacket():
         # Skip header
         pointer = 12
 
-        for i in self.qcount:
+        for i in range(self.qdcount):
             name, pointer = decode_name(pkt, pointer)
             self.names.append(name)
-            self.actual_qcount += 1
+            self.actual_qdcount += 1
 
             # Skip null, Type and class
             pointer += 5
 
-        for i in self.ancount:
+        for i in range(self.ancount):
             name, pointer = decode_name(pkt, pointer)
             self.names.append(name)
 
@@ -101,7 +101,7 @@ def validate_QDCOUNT_is_the_amount_of_Question_section(pcap_path):
     for pkt in pkt_reader(pcap_path):
         d = DNSPacket(pkt)
         print("Parsed names: ", d.names)
-        if d.qcount != d.actual_qcount:
+        if d.qdcount != d.actual_qdcount:
             print("Wrong qdcount")
             return False
     return True
