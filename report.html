@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <style>body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.log {
+  background-color: #e6e6e6;
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  height: 230px;
+  overflow-y: scroll;
+  padding: 5px;
+  white-space: pre-wrap;
+}
+.log:only-child {
+  height: inherit;
+}
+
+div.image {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.image img {
+  width: 320px;
+}
+
+div.video {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.video video {
+  overflow: hidden;
+  width: 320px;
+  height: 240px;
+}
+
+.collapsed {
+  display: none;
+}
+
+.expander::after {
+  content: " (show details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.collapser::after {
+  content: " (hide details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+
+.sort-icon {
+  font-size: 0px;
+  float: left;
+  margin-right: 5px;
+  margin-top: 5px;
+  /*triangle*/
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+.inactive .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #E6E6E6;
+}
+.asc.active .sort-icon {
+  /*finish triangle*/
+  border-bottom: 8px solid #999;
+}
+.desc.active .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #999;
+}
+</style></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++)
+        filterItems[i].hidden = false;
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 25-Feb-2022 at 16:31:18 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "1.0.0", "py": "1.11.0", "pytest": "7.0.1"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Linux-5.4.0-100-generic-x86_64-with-Ubuntu-18.04-bionic</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"html": "3.1.1", "metadata": "1.11.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.6.9</td></tr></table>
+    <h2>Summary</h2>
+    <p>126 tests ran in 42.78 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">91 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">35 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable" col="duration">Duration</th>
+          <th class="sortable links" col="links">Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-static_non_zero_Z.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   test_dns_pcap.FailedRule: b&#x27; Z.to_number().eq(other=0)&#x27; on static_non_zero_Z.pcap</span><br/> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_non_zero_Z.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_non_zero_Z.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-static_rcode_ge_4.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   test_dns_pcap.FailedRule: b&#x27; RCODE.to_number().lt(other=4)&#x27; on static_rcode_ge_4.pcap</span><br/> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rcode_ge_4.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rcode_ge_4.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-ap4_wrong_counts.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   test_dns_pcap.FailedRule: b&#x27; QDCOUNT.to_number().lt(other=2)&#x27; on ap4_wrong_counts.pcap</span><br/> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap4_wrong_counts.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap4_wrong_counts.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-CVE-2020-11901.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_NAME_only_contains_ASCII at 0x7f23b1d4fc80&gt;(&#x27;tests/test_dns/pcaps/CVE-2020-11901.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/CVE-2020-11901.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;CVE-2020-11901.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/CVE-2020-11901.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=81, len=18)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=81, len=18)<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-ap5_wrong_compression_offset.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_NAME_compression_offset_is_LEGAL at 0x7f23b1d4fd90&gt;(&#x27;tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;ap5_wrong_compression_offset.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=243, len=57)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=243, len=57)<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-ap3_missing_null_terminator.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_NAME_labels_in_the_CORRECT_SIZE at 0x7f23b1d4fd08&gt;(&#x27;tests/test_dns/pcaps/ap3_missing_null_terminator.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/ap3_missing_null_terminator.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;ap3_missing_null_terminator.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/ap3_missing_null_terminator.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=16116, len=16)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=16116, len=16)<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-ap3_missing_null_terminator.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QNAME_not_contain_0 at 0x7f23b1d4fe18&gt;(&#x27;tests/test_dns/pcaps/ap3_missing_null_terminator.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/ap3_missing_null_terminator.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;ap3_missing_null_terminator.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/ap3_missing_null_terminator.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=16116, len=16)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=16116, len=16)<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-simple_query_non_zero_Z.pcap0]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/simple_query_non_zero_Z.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/simple_query_non_zero_Z.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;simple_query_non_zero_Z.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong qdcount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-ap2_wrong_label_size.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/ap2_wrong_label_size.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/ap2_wrong_label_size.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;ap2_wrong_label_size.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/ap2_wrong_label_size.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong qdcount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-ap5_wrong_compression_offset.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   dynamic_rules_validator.InvalidCompressionOffset: Invalid compression offset, bigger then packet size</span><br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=243, len=57)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=243, len=57)<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-simple_query_non_zero_Z.pcap1]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/simple_query_non_zero_Z.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/simple_query_non_zero_Z.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;simple_query_non_zero_Z.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong qdcount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-static_rr_class_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/static_rr_class_ge_4.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/static_rr_class_ge_4.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;static_rr_class_ge_4.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_class_ge_4.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong qdcount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-ap3_missing_null_terminator.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   dynamic_rules_validator.InvalidLabelLengthOrMissingNullTerminator: Invalid label length or missing Null terminator, bigger then packet size</span><br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/ap3_missing_null_terminator.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=16116, len=16)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=16116, len=16)<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-CVE-2020-11901.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/CVE-2020-11901.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/CVE-2020-11901.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;CVE-2020-11901.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/CVE-2020-11901.pcap
+Parsed names:  [b&#x27;www.example.com.&#x27;, b&#x27;&#x27;]
+Wrong qdcount
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=81, len=18)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=81, len=18)<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-static_non_zero_Z.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/static_non_zero_Z.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/static_non_zero_Z.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;static_non_zero_Z.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/static_non_zero_Z.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong qdcount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-static_rr_qclass_ge_4_le_255.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;static_rr_qclass_ge_4_le_255.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong qdcount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-whitelist_compressed_answer.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/whitelist_compressed_answer.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/whitelist_compressed_answer.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;whitelist_compressed_answer.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_compressed_answer.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong qdcount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-ap4_wrong_counts.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/ap4_wrong_counts.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/ap4_wrong_counts.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;ap4_wrong_counts.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/ap4_wrong_counts.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong qdcount
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS wrong value: DNS.qdcount=255
+INFO: DNS wrong value: DNS.ancount=255
+INFO: DNS wrong value: DNS.nscount=255
+INFO: DNS wrong value: DNS.arcount=255
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.qdcount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.ancount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.nscount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.arcount=255<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-static_rcode_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/static_rcode_ge_4.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/static_rcode_ge_4.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;static_rcode_ge_4.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/static_rcode_ge_4.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong qdcount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-static_rr_type_ge_16.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_QDCOUNT_is_the_amount_of_Question_section at 0x7f23b1d4f840&gt;(&#x27;tests/test_dns/pcaps/static_rr_type_ge_16.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/static_rr_type_ge_16.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;static_rr_type_ge_16.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_type_ge_16.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong qdcount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QDCOUNT is-the-amount-of Question_section -&gt; QDCOUNT.to_number().validate_records_amount(other=Question_section)-whitelist_simple_query.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   IndexError: index out of range</span><br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QDCOUNT.to_number().validate_records_amount(other=Question_section)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_simple_query.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-simple_query_non_zero_Z.pcap0]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/simple_query_non_zero_Z.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/simple_query_non_zero_Z.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;simple_query_non_zero_Z.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong ancount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-ap2_wrong_label_size.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/ap2_wrong_label_size.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/ap2_wrong_label_size.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;ap2_wrong_label_size.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/ap2_wrong_label_size.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong ancount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-ap5_wrong_compression_offset.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   dynamic_rules_validator.InvalidCompressionOffset: Invalid compression offset, bigger then packet size</span><br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=243, len=57)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=243, len=57)<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-simple_query_non_zero_Z.pcap1]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/simple_query_non_zero_Z.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/simple_query_non_zero_Z.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;simple_query_non_zero_Z.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong ancount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-static_rr_class_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/static_rr_class_ge_4.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/static_rr_class_ge_4.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;static_rr_class_ge_4.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_class_ge_4.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong ancount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-ap3_missing_null_terminator.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   dynamic_rules_validator.InvalidLabelLengthOrMissingNullTerminator: Invalid label length or missing Null terminator, bigger then packet size</span><br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/ap3_missing_null_terminator.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=16116, len=16)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=16116, len=16)<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-CVE-2020-11901.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/CVE-2020-11901.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/CVE-2020-11901.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;CVE-2020-11901.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/CVE-2020-11901.pcap
+Parsed names:  [b&#x27;www.example.com.&#x27;, b&#x27;&#x27;]
+Wrong ancount
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=81, len=18)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=81, len=18)<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-static_non_zero_Z.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/static_non_zero_Z.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/static_non_zero_Z.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;static_non_zero_Z.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/static_non_zero_Z.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong ancount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-static_rr_qclass_ge_4_le_255.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;static_rr_qclass_ge_4_le_255.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong ancount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-whitelist_compressed_answer.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/whitelist_compressed_answer.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/whitelist_compressed_answer.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;whitelist_compressed_answer.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_compressed_answer.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong ancount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-ap4_wrong_counts.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/ap4_wrong_counts.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/ap4_wrong_counts.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;ap4_wrong_counts.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/ap4_wrong_counts.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong ancount
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS wrong value: DNS.qdcount=255
+INFO: DNS wrong value: DNS.ancount=255
+INFO: DNS wrong value: DNS.nscount=255
+INFO: DNS wrong value: DNS.arcount=255
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.qdcount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.ancount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.nscount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.arcount=255<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-static_rcode_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/static_rcode_ge_4.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/static_rcode_ge_4.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;static_rcode_ge_4.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/static_rcode_ge_4.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong ancount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-static_rr_type_ge_16.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   AssertionError: assert False</span><br/>     +  where False = &lt;function validate_ANCOUNT_is_the_amount_of_Resource_record_answer at 0x7f23b1d4fbf8&gt;(&#x27;tests/test_dns/pcaps/static_rr_type_ge_16.pcap&#x27;)<br/>     +    where &#x27;tests/test_dns/pcaps/static_rr_type_ge_16.pcap&#x27; = &lt;function join at 0x7f23b7d3d378&gt;(&#x27;tests&#x27;, &#x27;test_dns&#x27;, &#x27;pcaps&#x27;, &#x27;static_rr_type_ge_16.pcap&#x27;)<br/>     +      where &lt;function join at 0x7f23b7d3d378&gt; = &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt;.join<br/>     +        where &lt;module &#x27;posixpath&#x27; from &#x27;/usr/lib/python3.6/posixpath.py&#x27;&gt; = os.path<br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_type_ge_16.pcap
+Parsed names:  [b&#x27;google.google.google.com.&#x27;, b&#x27;google.google.google.com.&#x27;]
+Wrong ancount
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic ANCOUNT is-the-amount-of Resource_record_answer -&gt; ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)-whitelist_simple_query.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"><span class="error">E   IndexError: index out of range</span><br/> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  ANCOUNT.to_number().validate_records_amount(other=Resource_record_answer)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_simple_query.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-simple_query_non_zero_Z.pcap0]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/simple_query_non_zero_Z.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/simple_query_non_zero_Z.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-ap2_wrong_label_size.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap2_wrong_label_size.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap2_wrong_label_size.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-ap5_wrong_compression_offset.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-simple_query_non_zero_Z.pcap1]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/simple_query_non_zero_Z.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/simple_query_non_zero_Z.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-static_rr_class_ge_4.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rr_class_ge_4.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rr_class_ge_4.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-ap3_missing_null_terminator.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap3_missing_null_terminator.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap3_missing_null_terminator.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-CVE-2020-11901.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/CVE-2020-11901.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/CVE-2020-11901.pcap, link-type IPV4 (Raw IPv4)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-static_rr_qclass_ge_4_le_255.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-whitelist_compressed_answer.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/whitelist_compressed_answer.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/whitelist_compressed_answer.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-ap4_wrong_counts.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap4_wrong_counts.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap4_wrong_counts.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-static_rcode_ge_4.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rcode_ge_4.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rcode_ge_4.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-static_rr_type_ge_16.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rr_type_ge_16.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rr_type_ge_16.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0x70 == 0 -&gt; Z.to_number().eq(other=0)-whitelist_simple_query.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/whitelist_simple_query.pcap udp[11:1] &amp; 0x70 == 0 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/whitelist_simple_query.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-simple_query_non_zero_Z.pcap0]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/simple_query_non_zero_Z.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/simple_query_non_zero_Z.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-ap2_wrong_label_size.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap2_wrong_label_size.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap2_wrong_label_size.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-ap5_wrong_compression_offset.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-simple_query_non_zero_Z.pcap1]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/simple_query_non_zero_Z.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/simple_query_non_zero_Z.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-static_rr_class_ge_4.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rr_class_ge_4.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rr_class_ge_4.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-ap3_missing_null_terminator.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap3_missing_null_terminator.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap3_missing_null_terminator.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-CVE-2020-11901.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/CVE-2020-11901.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/CVE-2020-11901.pcap, link-type IPV4 (Raw IPv4)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-static_non_zero_Z.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_non_zero_Z.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_non_zero_Z.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-static_rr_qclass_ge_4_le_255.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-whitelist_compressed_answer.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/whitelist_compressed_answer.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/whitelist_compressed_answer.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-ap4_wrong_counts.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap4_wrong_counts.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap4_wrong_counts.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-static_rr_type_ge_16.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rr_type_ge_16.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rr_type_ge_16.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[11:1] &amp; 0xf &lt; 4 -&gt; RCODE.to_number().lt(other=4)-whitelist_simple_query.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/whitelist_simple_query.pcap udp[11:1] &amp; 0xf &lt; 4 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/whitelist_simple_query.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-simple_query_non_zero_Z.pcap0]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/simple_query_non_zero_Z.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/simple_query_non_zero_Z.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-ap2_wrong_label_size.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap2_wrong_label_size.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap2_wrong_label_size.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-ap5_wrong_compression_offset.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-simple_query_non_zero_Z.pcap1]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/simple_query_non_zero_Z.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/simple_query_non_zero_Z.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-static_rr_class_ge_4.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rr_class_ge_4.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rr_class_ge_4.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-ap3_missing_null_terminator.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/ap3_missing_null_terminator.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/ap3_missing_null_terminator.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-CVE-2020-11901.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/CVE-2020-11901.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/CVE-2020-11901.pcap, link-type IPV4 (Raw IPv4)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-static_non_zero_Z.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_non_zero_Z.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_non_zero_Z.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-static_rr_qclass_ge_4_le_255.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-whitelist_compressed_answer.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/whitelist_compressed_answer.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/whitelist_compressed_answer.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-static_rcode_ge_4.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rcode_ge_4.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rcode_ge_4.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-static_rr_type_ge_16.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/static_rr_type_ge_16.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/static_rr_type_ge_16.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_static_rule[udp[12:2] &lt; 2 -&gt; QDCOUNT.to_number().lt(other=2)-whitelist_simple_query.pcap]</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+tcpdump -pnnvvr tests/test_dns/pcaps/whitelist_simple_query.pcap udp[12:2] &lt; 2 
+<br/> ------------------------------Captured stderr call------------------------------ <br/>reading from file tests/test_dns/pcaps/whitelist_simple_query.pcap, link-type EN10MB (Ethernet)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-simple_query_non_zero_Z.pcap0]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-ap2_wrong_label_size.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/ap2_wrong_label_size.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-ap5_wrong_compression_offset.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=243, len=57)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=243, len=57)<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-simple_query_non_zero_Z.pcap1]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-static_rr_class_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_class_ge_4.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-ap3_missing_null_terminator.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/ap3_missing_null_terminator.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=16116, len=16)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=16116, len=16)<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-static_non_zero_Z.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/static_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-static_rr_qclass_ge_4_le_255.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-whitelist_compressed_answer.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_compressed_answer.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-ap4_wrong_counts.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/ap4_wrong_counts.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS wrong value: DNS.qdcount=255
+INFO: DNS wrong value: DNS.ancount=255
+INFO: DNS wrong value: DNS.nscount=255
+INFO: DNS wrong value: DNS.arcount=255
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.qdcount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.ancount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.nscount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.arcount=255<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-static_rcode_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/static_rcode_ge_4.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-static_rr_type_ge_16.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_type_ge_16.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME only-contains ASCII -&gt; NAME.get().is_text(other=ASCII)-whitelist_simple_query.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().is_text(other=ASCII)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_simple_query.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-simple_query_non_zero_Z.pcap0]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-ap2_wrong_label_size.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/ap2_wrong_label_size.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-simple_query_non_zero_Z.pcap1]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-static_rr_class_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_class_ge_4.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-ap3_missing_null_terminator.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/ap3_missing_null_terminator.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=16116, len=16)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=16116, len=16)<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-CVE-2020-11901.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/CVE-2020-11901.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=81, len=18)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=81, len=18)<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-static_non_zero_Z.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/static_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-static_rr_qclass_ge_4_le_255.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-whitelist_compressed_answer.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_compressed_answer.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-ap4_wrong_counts.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/ap4_wrong_counts.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS wrong value: DNS.qdcount=255
+INFO: DNS wrong value: DNS.ancount=255
+INFO: DNS wrong value: DNS.nscount=255
+INFO: DNS wrong value: DNS.arcount=255
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.qdcount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.ancount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.nscount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.arcount=255<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-static_rcode_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/static_rcode_ge_4.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-static_rr_type_ge_16.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_type_ge_16.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME compression-offset-is LEGAL -&gt; NAME.get().compressions_offset(other=LEGAL)-whitelist_simple_query.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().compressions_offset(other=LEGAL)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_simple_query.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-simple_query_non_zero_Z.pcap0]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-ap2_wrong_label_size.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/ap2_wrong_label_size.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-ap5_wrong_compression_offset.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=243, len=57)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=243, len=57)<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-simple_query_non_zero_Z.pcap1]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-static_rr_class_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_class_ge_4.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-CVE-2020-11901.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/CVE-2020-11901.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=81, len=18)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=81, len=18)<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-static_non_zero_Z.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/static_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-static_rr_qclass_ge_4_le_255.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-whitelist_compressed_answer.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_compressed_answer.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-ap4_wrong_counts.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/ap4_wrong_counts.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS wrong value: DNS.qdcount=255
+INFO: DNS wrong value: DNS.ancount=255
+INFO: DNS wrong value: DNS.nscount=255
+INFO: DNS wrong value: DNS.arcount=255
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.qdcount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.ancount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.nscount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.arcount=255<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-static_rcode_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/static_rcode_ge_4.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-static_rr_type_ge_16.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_type_ge_16.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic NAME labels-in-the CORRECT_SIZE -&gt; NAME.get().labels(other=CORRECT_SIZE)-whitelist_simple_query.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  NAME.get().labels(other=CORRECT_SIZE)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_simple_query.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-simple_query_non_zero_Z.pcap0]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-ap2_wrong_label_size.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/ap2_wrong_label_size.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-ap5_wrong_compression_offset.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/ap5_wrong_compression_offset.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=243, len=57)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=243, len=57)<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-simple_query_non_zero_Z.pcap1]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/simple_query_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-static_rr_class_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_class_ge_4.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-CVE-2020-11901.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/CVE-2020-11901.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS RR prematured end (ofs=81, len=18)
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:60 DNS RR prematured end (ofs=81, len=18)<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-static_non_zero_Z.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/static_non_zero_Z.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-static_rr_qclass_ge_4_le_255.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_qclass_ge_4_le_255.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-whitelist_compressed_answer.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_compressed_answer.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-ap4_wrong_counts.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/ap4_wrong_counts.pcap
+<br/> ------------------------------Captured stderr call------------------------------ <br/>INFO: DNS wrong value: DNS.qdcount=255
+INFO: DNS wrong value: DNS.ancount=255
+INFO: DNS wrong value: DNS.nscount=255
+INFO: DNS wrong value: DNS.arcount=255
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.qdcount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.ancount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.nscount=255
+INFO     scapy.runtime:dns.py:326 DNS wrong value: DNS.arcount=255<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-static_rcode_ge_4.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/static_rcode_ge_4.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-static_rr_type_ge_16.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/static_rr_type_ge_16.pcap
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_dns/test_dns_pcap.py::test_dynamic_rule[Dynamic QNAME not-contain 0 -&gt; QNAME.get().not_contain(other=0)-whitelist_simple_query.pcap]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Rule based on  QNAME.get().not_contain(other=0)
+Loaded PCAP:  tests/test_dns/pcaps/whitelist_simple_query.pcap
+<br/></div></td></tr></tbody></table></body></html>
